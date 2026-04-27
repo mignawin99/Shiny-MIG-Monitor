@@ -16,7 +16,7 @@ PACK_ODDS = {
 }
 
 # --- เชื่อมต่อ Google Sheets ผ่าน ID ของคุณ ---
-SHEET_ID = "1plLrluKJC91t6Ql0K_HdFgwqIZtf4Jixxwyq5nPF-uk"
+SHEET_ID = "https://script.google.com/macros/s/AKfycbxiXg2E5ejd6Rw-AjHoFtX9du1R6Qls0V-iqHuoiKJ444c-048ZEEuE_iwjffr2blSH/exec"
 sheet_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 def load_data():
