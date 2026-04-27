@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import time
 
-# ตั้งค่าหน้าเว็บ
+# --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Shiny.com Analytics - Pokemon Starter", layout="wide")
 
 # ข้อมูลโอกาส (Odds) ตามหน้าเว็บจริง
@@ -15,19 +15,23 @@ PACK_ODDS = {
     "BRONZE": 0.425
 }
 
+# --- เชื่อมต่อ Google Sheets ผ่าน ID ของคุณ ---
+SHEET_ID = "1plLrluKJC91t6Ql0K_HdFgwqIZtf4Jixxwyq5nPF-uk"
+sheet_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+
 def load_data():
     try:
-        df = pd.read_csv("shiny_history.csv")
+        # ดึงข้อมูลจาก Google Sheets (ต้องตั้งค่าแชร์เป็น 'Anyone with the link' ก่อนนะครับ)
+        df = pd.read_csv(sheet_url)
         df['Tier'] = df['Tier'].str.upper()
         return df
-    except:
+    except Exception as e:
         return pd.DataFrame(columns=['Time', 'Tier', 'User', 'Card', 'Stage', 'Value'])
 
-# หัวข้อหน้าเว็บ
-st.title("🔥 Pokemon Starter Pack Real-time Monitor")
-st.markdown("ระบบวิเคราะห์โอกาสการเปิดได้ฮิต และสถิติจาก Live Hits")
+# --- ส่วนแสดงผลหน้าเว็บ ---
+st.title("🔥 Pokemon Starter Pack Real-time Monitor (Cloud)")
+st.markdown("ระบบวิเคราะห์สถิติจริงจาก Google Sheets")
 
-# ส่วนอัปเดตข้อมูลอัตโนมัติ
 placeholder = st.empty()
 
 while True:
@@ -49,20 +53,17 @@ while True:
 
             st.divider()
 
-            # 2. กราฟวิเคราะห์
+            # 2. กราฟและการวิเคราะห์
             c1, c2 = st.columns([2, 1])
             
             with c1:
-                st.subheader("📊 สถิติการออกแต่ละระดับ (Real vs Expected)")
+                st.subheader("📊 สถิติการออกแต่ละระดับ")
                 stats = df['Tier'].value_counts().reset_index()
                 stats.columns = ['Tier', 'Real_Count']
-                
-                # คำนวณค่าที่ควรจะเป็น (Expected)
                 stats['Expected_Count'] = stats['Tier'].map(lambda x: total_spins * PACK_ODDS.get(x, 0))
                 
-                fig = px.bar(stats, x='Tier', y=['Real_Count', 'Expected_Count'], 
-                             barmode='group', color_discrete_sequence=['#FF4B4B', '#FFAA00'])
-                st.plotly_chart(fig, use_container_width=True)
+                fig = px.bar(stats, x='Tier', y=['Real_Count', 'Expected_Count'], barmode='group')
+                st.plotly_chart(fig, use_container_width=True, key=f"chart_{time.time()}")
 
             with c2:
                 st.subheader("💡 วิเคราะห์ดวง (Hot/Cold)")
@@ -70,17 +71,14 @@ while True:
                     actual = (df['Tier'] == tier).sum()
                     expected = total_spins * prob
                     diff = expected - actual
-                    
-                    if diff > 0:
-                        st.success(f"**{tier}**: 🔥 HOT (ขาดช่วงนานแล้ว)")
-                    else:
-                        st.warning(f"**{tier}**: ❄️ COLD (เพิ่งออกเยอะ)")
+                    status = "🔥 HOT" if diff > 0 else "❄️ COLD"
+                    st.write(f"**{tier}**: {status}")
 
             # 3. ตารางประวัติล่าสุด
-            st.subheader("📋 10 รายการจุ่มล่าสุด")
-            st.dataframe(df.tail(10).sort_index(ascending=False), use_container_width=True)
+            st.subheader("📋 รายการจุ่มล่าสุด")
+            st.dataframe(df.tail(10).iloc[::-1], use_container_width=True)
             
         else:
-            st.info("กำลังรอข้อมูลจากหุ่นยนต์... กรุณารัน shiny_realtime.py ทิ้งไว้")
+            st.info("⌛ กำลังรอข้อมูลไหลเข้า Google Sheets... กรุณารันบอทในคอมทิ้งไว้")
 
-    time.sleep(5) # รีเฟรชทุก 5 วินาที
+    time.sleep(15) # อัปเดตทุก 15 วินาที (เพื่อไม่ให้ Google แบนการเข้าถึงบ่อยเกินไป)
